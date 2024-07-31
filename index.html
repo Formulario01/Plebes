@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mostrar Datos de SheetDB.io</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.3.0/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(120deg, #a1c4fd, #c2e9fb);
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      perspective: 1000px;
+    }
+    header {
+      background: linear-gradient(45deg, #007bff, #00c6ff);
+      color: white;
+      text-align: center;
+      padding: 20px 0;
+      width: 100%;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      margin-bottom: 20px;
+      transform: rotateY(10deg);
+      animation: headerAnim 1s ease-in-out;
+    }
+    .container {
+      max-width: 600px;
+      background: white;
+      padding: 20px;
+      border-radius: 15px;
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+      text-align: center;
+      animation: fadeIn 1s ease-in-out;
+      position: relative;
+      overflow: hidden;
+      transform: rotateY(-10deg);
+      animation: containerAnim 1.5s ease-in-out;
+    }
+    .container:before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(0,123,255,0.5) 10%, transparent 10.01%);
+      background-size: 50% 50%;
+      animation: rotateBg 20s linear infinite;
+      z-index: -1;
+    }
+    @keyframes headerAnim {
+      from {
+        transform: rotateY(-30deg);
+        opacity: 0;
+      }
+      to {
+        transform: rotateY(10deg);
+        opacity: 1;
+      }
+    }
+    @keyframes containerAnim {
+      from {
+        transform: rotateY(30deg);
+        opacity: 0;
+      }
+      to {
+        transform: rotateY(-10deg);
+        opacity: 1;
+      }
+    }
+    @keyframes rotateBg {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    .data-list {
+      list-style: none;
+      padding: 0;
+    }
+    .data-item {
+      background: #fff;
+      margin-bottom: 15px;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      animation: fadeInUp 0.5s ease;
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+    .data-item:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+    }
+    .data-item span {
+      flex: 1;
+      padding: 0 10px;
+    }
+    .btn-copy {
+      background: linear-gradient(45deg, #007bff, #00c6ff);
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      transition: background 0.3s, transform 0.3s;
+    }
+    .btn-copy:hover {
+      background: linear-gradient(45deg, #0056b3, #0091ff);
+      transform: scale(1.05);
+    }
+    .btn-copy i {
+      margin-right: 5px;
+    }
+    .loading {
+      margin-top: 20px;
+      text-align: center;
+    }
+    .toast-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 9999;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    @media (max-width: 576px) {
+      .container {
+        padding: 15px;
+      }
+      .data-item {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .data-item span {
+        padding: 5px 0;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Bienvenido</h1>
+</header>
+
+<div class="container">
+  <div class="form-group">
+    <label for="endpointInput">Ingrese su endpoint:</label>
+    <input type="text" id="endpointInput" class="form-control" placeholder="endpoint aqui">
+  </div>
+  <button class="btn btn-primary" onclick="fetchData()">Mostrar Datos</button>
+
+  <div class="loading" id="loading" style="display: none;">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Cargando...</span>
+    </div>
+  </div>
+
+  <ul class="data-list" id="dataList" style="display: none;">
+    <!-- Los datos se insertarán aquí -->
+  </ul>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+  async function fetchData() {
+    const endpoint = document.getElementById('endpointInput').value;
+    if (!endpoint) {
+      alert('Por favor, ingrese un endpoint válido.');
+      return;
+    }
+
+    const loading = document.getElementById('loading');
+    const dataList = document.getElementById('dataList');
+    loading.style.display = 'block';
+    dataList.style.display = 'none';
+
+    try {
+      const response = await fetch(endpoint);
+      const data = await response.json();
+      dataList.innerHTML = '';
+
+      data.reverse().forEach(item => {
+        const listItem = document.createElement('li');
+        listItem.className = 'data-item';
+
+        const emailSpan = document.createElement('span');
+        emailSpan.textContent = item.email || item['correo o numero'] || 'N/A';
+
+        const passwordSpan = document.createElement('span');
+        passwordSpan.textContent = item.password || item.contraseña || 'N/A';
+
+        const copyEmailButton = document.createElement('button');
+        copyEmailButton.className = 'btn-copy';
+        copyEmailButton.innerHTML = '<i class="fas fa-copy"></i> Correo';
+        copyEmailButton.onclick = () => copyToClipboard(emailSpan.textContent, 'Correo copiado al portapapeles');
+
+        const copyPasswordButton = document.createElement('button');
+        copyPasswordButton.className = 'btn-copy';
+        copyPasswordButton.innerHTML = '<i class="fas fa-copy"></i> Contraseña';
+        copyPasswordButton.onclick = () => copyToClipboard(passwordSpan.textContent, 'Contraseña copiada al portapapeles');
+
+        listItem.appendChild(emailSpan);
+        listItem.appendChild(copyEmailButton);
+        listItem.appendChild(passwordSpan);
+        listItem.appendChild(copyPasswordButton);
+
+        dataList.appendChild(listItem);
+      });
+
+      dataList.style.display = 'block';
+    } catch (error) {
+      console.error('Error al obtener los datos:', error);
+      alert('Error al obtener los datos. Revise el endpoint e intente de nuevo.');
+    } finally {
+      loading.style.display = 'none';
+    }
+  }
+
+  function copyToClipboard(text, message) {
+    navigator.clipboard.writeText(text).then(() => {
+      showToast(message);
+    }).catch(err => {
+      console.error('Error al copiar el texto:', err);
+    });
+  }
+
+  function showToast(message) {
+    const toastContainer = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = 'toast align-items-center text-white bg-success border-0';
+    toast.role = 'alert';
+    toast.ariaLive = 'assertive';
+    toast.ariaAtomic = 'true';
+    toast.innerHTML = `
+      <div class="d-flex">
+        <div class="toast-body">
+          ${message}
+        </div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+      </div>
+    `;
+    toastContainer.appendChild(toast);
+    const bootstrapToast = new bootstrap.Toast(toast);
+    bootstrapToast.show();
+
+    toast.addEventListener('hidden.bs.toast', () => {
+      toastContainer.removeChild(toast);
+    });
+  }
+</script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/js/all.min.js"></script>
+</body>
+</html>
+
